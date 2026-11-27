@@ -1,0 +1,27 @@
+{
+  "files": {
+    "includes": [
+      "*.json",
+      "*.ts",
+      "*.mjs",
+      "public/**",
+      "server/**",
+      "shared/**",
+      "src/**",
+      "tests/**",
+      "tools/**",
+      "!package-lock.json"
+    ]
+  },
+  "formatter": { "indentStyle": "space", "lineWidth": 115 },
+  "javascript": { "formatter": { "semicolons": "asNeeded", "trailingCommas": "all" } },
+  "linter": {
+    "enabled": true,
+    "rules": {
+      "preset": "recommended",
+      "correctness": {
+        "noReactNativeRawText": { "level": "error", "options": { "skip": ["Copy"] } }
+      }
+    }
+  }
+}

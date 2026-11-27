@@ -1,0 +1,14 @@
+gradle.beforeProject { project ->
+    ['com.android.application', 'com.android.library'].each { pluginId ->
+        project.pluginManager.withPlugin(pluginId) {
+            project.extensions.getByName('androidComponents').finalizeDsl { android ->
+                android.externalNativeBuild.cmake.version = '3.31.6'
+                android.defaultConfig.externalNativeBuild.cmake.arguments.add('-DCMAKE_OBJECT_PATH_MAX=260')
+                if (pluginId == 'com.android.application') {
+                    android.externalNativeBuild.cmake.buildStagingDirectory =
+                        new File(project.rootDir.parentFile, '.local/app-cxx')
+                }
+            }
+        }
+    }
+}

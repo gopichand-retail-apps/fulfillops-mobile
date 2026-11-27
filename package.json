@@ -1,0 +1,55 @@
+{
+  "name": "orderflow",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "main": "index.ts",
+  "packageManager": "npm@11.12.1",
+  "engines": {
+    "node": ">=24.15.0 <25"
+  },
+  "scripts": {
+    "start": "expo start --dev-client --localhost --port 5762",
+    "api": "node --env-file=.local/connection.env server/main.ts",
+    "migrate": "node --env-file=.local/connection.env server/migrate.ts",
+    "operator": "node --env-file=.local/operator.env tools/operator.ts",
+    "typecheck": "tsc --noEmit",
+    "lint": "biome lint .",
+    "format:check": "biome format .",
+    "test": "node --env-file=.local/test.env --test tests/*.test.ts",
+    "coverage": "node --env-file=.local/test.env --test --experimental-test-coverage --test-coverage-include=server/identity/*.ts --test-coverage-include=server/work/*.ts --test-coverage-include=shared/contracts.ts --test-coverage-lines=90 --test-coverage-branches=90 --test-coverage-functions=90 tests/*.test.ts",
+    "bundle:android": "expo export --platform android --output-dir .local/bundle-android",
+    "bundle:ios": "expo export --platform ios --output-dir .local/bundle-ios"
+  },
+  "dependencies": {
+    "@react-navigation/native": "7.5.2",
+    "@react-navigation/native-stack": "7.21.1",
+    "@tanstack/react-query": "5.108.4",
+    "expo": "58.0.26",
+    "expo-camera": "~58.0.14",
+    "expo-crypto": "58.0.8",
+    "expo-dev-client": "58.0.21",
+    "expo-secure-store": "58.0.3",
+    "expo-splash-screen": "58.0.14",
+    "expo-sqlite": "~58.0.18",
+    "expo-system-ui": "58.0.7",
+    "pg": "8.23.1",
+    "react": "19.3.0",
+    "react-native": "0.88.1",
+    "react-native-safe-area-context": "5.11.1",
+    "react-native-screens": "4.30.1",
+    "zod": "4.6.7"
+  },
+  "overrides": {
+    "@expo/fingerprint": {
+      "minimatch": "11.0.1"
+    }
+  },
+  "devDependencies": {
+    "@biomejs/biome": "2.6.9",
+    "@types/node": "24.13.2",
+    "@types/pg": "8.23.1",
+    "@types/react": "19.3.0",
+    "typescript": "6.0.3"
+  }
+}

@@ -1,0 +1,2209 @@
+openapi: 3.1.0
+info:
+  title: OrderFlow local fulfillment API
+  version: 0.1.0
+  description: >-
+    OrderFlow synthetic IT API. Warehouse commands operate on manually released local work. Bootstrap and
+    invitation creation use the local operator utility.
+servers:
+  - url: http://127.0.0.1:5761
+    description: Development loopback or authorized debug-only ADB reverse.
+security:
+  - StaffSession: []
+paths:
+  /healthz:
+    get:
+      operationId: health
+      summary: Check process liveness
+      security: []
+      responses:
+        "200":
+          description: Process available.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Health"
+        "400":
+          $ref: "#/components/responses/Error"
+        "403":
+          $ref: "#/components/responses/Error"
+        "429":
+          $ref: "#/components/responses/Error"
+        "503":
+          $ref: "#/components/responses/Error"
+        default:
+          $ref: "#/components/responses/Error"
+  /readyz:
+    get:
+      operationId: readiness
+      summary: Check database and migration readiness
+      security: []
+      responses:
+        "200":
+          description: Database available and schema current.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Health"
+        "400":
+          $ref: "#/components/responses/Error"
+        "403":
+          $ref: "#/components/responses/Error"
+        "429":
+          $ref: "#/components/responses/Error"
+        "503":
+          $ref: "#/components/responses/Error"
+        default:
+          $ref: "#/components/responses/Error"
+  /v1/sessions:
+    post:
+      operationId: signIn
+      summary: Authenticate an enrolled staff member
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SignIn"
+      responses:
+        "201":
+          description: New session.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Session"
+        "400":
+          $ref: "#/components/responses/Error"
+        "403":
+          $ref: "#/components/responses/Error"
+        "413":
+          $ref: "#/components/responses/Error"
+        "415":
+          $ref: "#/components/responses/Error"
+        "422":
+          $ref: "#/components/responses/Error"
+        "429":
+          $ref: "#/components/responses/Error"
+        "503":
+          $ref: "#/components/responses/Error"
+        default:
+          $ref: "#/components/responses/Error"
+  /v1/invitation-redemptions:
+    post:
+      operationId: redeemInvitation
+      summary: Set credentials for one scoped, unexpired invitation
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/InvitationRedemption"
+      responses:
+        "201":
+          description: Invitation consumed and account enrolled.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Enrollment"
+        "400":
+          $ref: "#/components/responses/Error"
+        "403":
+          $ref: "#/components/responses/Error"
+        "413":
+          $ref: "#/components/responses/Error"
+        "415":
+          $ref: "#/components/responses/Error"
+        "422":
+          $ref: "#/components/responses/Error"
+        "429":
+          $ref: "#/components/responses/Error"
+        "503":
+          $ref: "#/components/responses/Error"
+        default:
+          $ref: "#/components/responses/Error"
+  /v1/sessions/current:
+    delete:
+      operationId: signOut
+      summary: Revoke current session
+      responses:
+        "204":
+          description: Session revoked.
+        "400":
+          $ref: "#/components/responses/Error"
+        "401":
+          $ref: "#/components/responses/Error"
+        "403":
+          $ref: "#/components/responses/Error"
+        "404":
+          $ref: "#/components/responses/Error"
+        "429":
+          $ref: "#/components/responses/Error"
+        "503":
+          $ref: "#/components/responses/Error"
+        default:
+          $ref: "#/components/responses/Error"
+  /v1/sites:
+    get:
+      operationId: listSites
+      summary: List current scoped site grants
+      responses:
+        "200":
+          description: Sites associated with the subject.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SiteList"
+        "400":
+          $ref: "#/components/responses/Error"
+        "401":
+          $ref: "#/components/responses/Error"
+        "403":
+          $ref: "#/components/responses/Error"
+        "404":
+          $ref: "#/components/responses/Error"
+        "429":
+          $ref: "#/components/responses/Error"
+        "503":
+          $ref: "#/components/responses/Error"
+        default:
+          $ref: "#/components/responses/Error"
+  /v1/sites/{siteId}/releases:
+    parameters:
+      - $ref: "#/components/parameters/SiteId"
+    post:
+      operationId: createRelease
+      summary: Enter a verified manual release
+      parameters:
+        - $ref: "#/components/parameters/IdempotencyKey"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ReleaseInput"
+      responses:
+        "201":
+          description: Durable release receipt. Same-key retry replays this receipt.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Receipt"
+        "400":
+          $ref: "#/components/responses/Error"
+        "401":
+          $ref: "#/components/responses/Error"
+        "403":
+          $ref: "#/components/responses/Error"
+        "404":
+          $ref: "#/components/responses/Error"
+        "409":
+          description: Revision, source or idempotency conflict. Current state appears only on an authorized projection.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Conflict"
+        "413":
+          $ref: "#/components/responses/Error"
+        "415":
+          $ref: "#/components/responses/Error"
+        "422":
+          $ref: "#/components/responses/Error"
+        "429":
+          $ref: "#/components/responses/Error"
+        "503":
+          $ref: "#/components/responses/Error"
+        default:
+          $ref: "#/components/responses/Error"
+  /v1/sites/{siteId}/work:
+    parameters:
+      - $ref: "#/components/parameters/SiteId"
+    get:
+      operationId: listWork
+      summary: List a stable scoped queue page
+      parameters:
+        - name: cursor
+          in: query
+          schema:
+            type: string
+            minLength: 1
+            maxLength: 512
+          description: Server-scoped cursor. Use with the original filters.
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 25
+          description: Maximum rows for a page.
+        - name: status
+          in: query
+          schema:
+            type: string
+            enum:
+              - released
+              - claimed
+              - picking
+              - exception
+              - picked
+              - packed
+              - handed_over
+              - cancelled
+          description: Filter by work status.
+        - name: assignment
+          in: query
+          schema:
+            type: string
+            enum:
+              - available
+              - mine
+          description: Optional assignment projection.
+        - name: reference
+          in: query
+          schema:
+            type: string
+            minLength: 1
+            maxLength: 80
+          description: Exact normalized order reference.
+      responses:
+        "200":
+          description: Queue page and snapshot information.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WorkPage"
+        "400":
+          $ref: "#/components/responses/Error"
+        "401":
+          $ref: "#/components/responses/Error"
+        "403":
+          $ref: "#/components/responses/Error"
+        "404":
+          $ref: "#/components/responses/Error"
+        "409":
+          description: Revision, source or idempotency conflict. Current state appears only on an authorized projection.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Conflict"
+        "429":
+          $ref: "#/components/responses/Error"
+        "503":
+          $ref: "#/components/responses/Error"
+        default:
+          $ref: "#/components/responses/Error"
+  /v1/sites/{siteId}/work/{workId}:
+    parameters:
+      - $ref: "#/components/parameters/SiteId"
+      - $ref: "#/components/parameters/WorkId"
+    get:
+      operationId: getWork
+      summary: Read current scoped work and bounded history
+      responses:
+        "200":
+          description: Current detail with permitted fields only.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WorkDetail"
+        "400":
+          $ref: "#/components/responses/Error"
+        "401":
+          $ref: "#/components/responses/Error"
+        "403":
+          $ref: "#/components/responses/Error"
+        "404":
+          $ref: "#/components/responses/Error"
+        "429":
+          $ref: "#/components/responses/Error"
+        "503":
+          $ref: "#/components/responses/Error"
+        default:
+          $ref: "#/components/responses/Error"
+  /v1/sites/{siteId}/work/{workId}/claim:
+    parameters:
+      - $ref: "#/components/parameters/SiteId"
+      - $ref: "#/components/parameters/WorkId"
+    post:
+      operationId: claimWork
+      summary: Claim available work at the expected revision
+      parameters:
+        - $ref: "#/components/parameters/IdempotencyKey"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ClaimInput"
+      responses:
+        "201":
+          description: Durable claim receipt. Same-key retry replays this receipt.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Receipt"
+        "400":
+          $ref: "#/components/responses/Error"
+        "401":
+          $ref: "#/components/responses/Error"
+        "403":
+          $ref: "#/components/responses/Error"
+        "404":
+          $ref: "#/components/responses/Error"
+        "409":
+          description: Revision, source or idempotency conflict. Current state appears only on an authorized projection.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Conflict"
+        "413":
+          $ref: "#/components/responses/Error"
+        "415":
+          $ref: "#/components/responses/Error"
+        "422":
+          $ref: "#/components/responses/Error"
+        "429":
+          $ref: "#/components/responses/Error"
+        "503":
+          $ref: "#/components/responses/Error"
+        default:
+          $ref: "#/components/responses/Error"
+  /v1/sites/{siteId}/operations/{operationId}:
+    parameters:
+      - $ref: "#/components/parameters/SiteId"
+      - $ref: "#/components/parameters/OperationId"
+    get:
+      operationId: getReceipt
+      summary: Read permitted original operation receipt
+      responses:
+        "200":
+          description: The operation committed.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Receipt"
+        "400":
+          $ref: "#/components/responses/Error"
+        "401":
+          $ref: "#/components/responses/Error"
+        "403":
+          $ref: "#/components/responses/Error"
+        "404":
+          $ref: "#/components/responses/Error"
+        "429":
+          $ref: "#/components/responses/Error"
+        "503":
+          $ref: "#/components/responses/Error"
+        default:
+          $ref: "#/components/responses/Error"
+  /v1/sites/{siteId}/work/{workId}/claim/release:
+    parameters:
+      - $ref: "#/components/parameters/SiteId"
+      - $ref: "#/components/parameters/WorkId"
+    post:
+      operationId: releaseClaim
+      summary: Release unstarted assigned work.
+      parameters:
+        - $ref: "#/components/parameters/IdempotencyKey"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ReleaseClaimInput"
+      responses:
+        "201":
+          description: Committed or original replayed receipt.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Receipt"
+        "400":
+          $ref: "#/components/responses/Error"
+        "401":
+          $ref: "#/components/responses/Error"
+        "403":
+          $ref: "#/components/responses/Error"
+        "404":
+          $ref: "#/components/responses/Error"
+        "409":
+          description: Revision, state or idempotency conflict.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "413":
+          $ref: "#/components/responses/Error"
+        "415":
+          $ref: "#/components/responses/Error"
+        "422":
+          $ref: "#/components/responses/Error"
+        "429":
+          $ref: "#/components/responses/Error"
+        "503":
+          $ref: "#/components/responses/Error"
+        default:
+          $ref: "#/components/responses/Error"
+  /v1/sites/{siteId}/work/{workId}/claim/reassign:
+    parameters:
+      - $ref: "#/components/parameters/SiteId"
+      - $ref: "#/components/parameters/WorkId"
+    post:
+      operationId: reassignClaim
+      summary: A supervisor assigns an eligible picker.
+      parameters:
+        - $ref: "#/components/parameters/IdempotencyKey"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ReassignInput"
+      responses:
+        "201":
+          description: Committed or original replayed receipt.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Receipt"
+        "400":
+          $ref: "#/components/responses/Error"
+        "401":
+          $ref: "#/components/responses/Error"
+        "403":
+          $ref: "#/components/responses/Error"
+        "404":
+          $ref: "#/components/responses/Error"
+        "409":
+          description: Revision, state or idempotency conflict.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "413":
+          $ref: "#/components/responses/Error"
+        "415":
+          $ref: "#/components/responses/Error"
+        "422":
+          $ref: "#/components/responses/Error"
+        "429":
+          $ref: "#/components/responses/Error"
+        "503":
+          $ref: "#/components/responses/Error"
+        default:
+          $ref: "#/components/responses/Error"
+  /v1/sites/{siteId}/work/{workId}/lines/{lineId}/picks:
+    parameters:
+      - $ref: "#/components/parameters/SiteId"
+      - $ref: "#/components/parameters/WorkId"
+      - $ref: "#/components/parameters/LineId"
+    post:
+      operationId: confirmPick
+      summary: Confirm a line observation against the current claim.
+      parameters:
+        - $ref: "#/components/parameters/IdempotencyKey"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PickInput"
+      responses:
+        "201":
+          description: Committed or original replayed receipt.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Receipt"
+        "400":
+          $ref: "#/components/responses/Error"
+        "401":
+          $ref: "#/components/responses/Error"
+        "403":
+          $ref: "#/components/responses/Error"
+        "404":
+          $ref: "#/components/responses/Error"
+        "409":
+          description: Revision, state or idempotency conflict.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "413":
+          $ref: "#/components/responses/Error"
+        "415":
+          $ref: "#/components/responses/Error"
+        "422":
+          $ref: "#/components/responses/Error"
+        "429":
+          $ref: "#/components/responses/Error"
+        "503":
+          $ref: "#/components/responses/Error"
+        default:
+          $ref: "#/components/responses/Error"
+  /v1/sites/{siteId}/work/{workId}/lines/{lineId}/shortages:
+    parameters:
+      - $ref: "#/components/parameters/SiteId"
+      - $ref: "#/components/parameters/WorkId"
+      - $ref: "#/components/parameters/LineId"
+    post:
+      operationId: reportShortage
+      summary: Record a shortage during picking.
+      parameters:
+        - $ref: "#/components/parameters/IdempotencyKey"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ShortageInput"
+      responses:
+        "201":
+          description: Committed or original replayed receipt.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Receipt"
+        "400":
+          $ref: "#/components/responses/Error"
+        "401":
+          $ref: "#/components/responses/Error"
+        "403":
+          $ref: "#/components/responses/Error"
+        "404":
+          $ref: "#/components/responses/Error"
+        "409":
+          description: Revision, state or idempotency conflict.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "413":
+          $ref: "#/components/responses/Error"
+        "415":
+          $ref: "#/components/responses/Error"
+        "422":
+          $ref: "#/components/responses/Error"
+        "429":
+          $ref: "#/components/responses/Error"
+        "503":
+          $ref: "#/components/responses/Error"
+        default:
+          $ref: "#/components/responses/Error"
+  /v1/sites/{siteId}/work/{workId}/shortages/{shortageId}/resolve:
+    parameters:
+      - $ref: "#/components/parameters/SiteId"
+      - $ref: "#/components/parameters/WorkId"
+      - $ref: "#/components/parameters/ShortageId"
+    post:
+      operationId: resolveShortage
+      summary: Resolve an open shortage under supervisor scope.
+      parameters:
+        - $ref: "#/components/parameters/IdempotencyKey"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ResolveShortageInput"
+      responses:
+        "201":
+          description: Committed or original replayed receipt.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Receipt"
+        "400":
+          $ref: "#/components/responses/Error"
+        "401":
+          $ref: "#/components/responses/Error"
+        "403":
+          $ref: "#/components/responses/Error"
+        "404":
+          $ref: "#/components/responses/Error"
+        "409":
+          description: Revision, state or idempotency conflict.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "413":
+          $ref: "#/components/responses/Error"
+        "415":
+          $ref: "#/components/responses/Error"
+        "422":
+          $ref: "#/components/responses/Error"
+        "429":
+          $ref: "#/components/responses/Error"
+        "503":
+          $ref: "#/components/responses/Error"
+        default:
+          $ref: "#/components/responses/Error"
+  /v1/sites/{siteId}/work/{workId}/packages:
+    parameters:
+      - $ref: "#/components/parameters/SiteId"
+      - $ref: "#/components/parameters/WorkId"
+    post:
+      operationId: sealPackage
+      summary: Commit the verified package contents.
+      parameters:
+        - $ref: "#/components/parameters/IdempotencyKey"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PackInput"
+      responses:
+        "201":
+          description: Committed or original replayed receipt.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Receipt"
+        "400":
+          $ref: "#/components/responses/Error"
+        "401":
+          $ref: "#/components/responses/Error"
+        "403":
+          $ref: "#/components/responses/Error"
+        "404":
+          $ref: "#/components/responses/Error"
+        "409":
+          description: Revision, state or idempotency conflict.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "413":
+          $ref: "#/components/responses/Error"
+        "415":
+          $ref: "#/components/responses/Error"
+        "422":
+          $ref: "#/components/responses/Error"
+        "429":
+          $ref: "#/components/responses/Error"
+        "503":
+          $ref: "#/components/responses/Error"
+        default:
+          $ref: "#/components/responses/Error"
+  /v1/sites/{siteId}/work/{workId}/handoffs:
+    parameters:
+      - $ref: "#/components/parameters/SiteId"
+      - $ref: "#/components/parameters/WorkId"
+    post:
+      operationId: recordHandoff
+      summary: Record an observed physical pickup.
+      parameters:
+        - $ref: "#/components/parameters/IdempotencyKey"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/HandoffInput"
+      responses:
+        "201":
+          description: Committed or original replayed receipt.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Receipt"
+        "400":
+          $ref: "#/components/responses/Error"
+        "401":
+          $ref: "#/components/responses/Error"
+        "403":
+          $ref: "#/components/responses/Error"
+        "404":
+          $ref: "#/components/responses/Error"
+        "409":
+          description: Revision, state or idempotency conflict.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "413":
+          $ref: "#/components/responses/Error"
+        "415":
+          $ref: "#/components/responses/Error"
+        "422":
+          $ref: "#/components/responses/Error"
+        "429":
+          $ref: "#/components/responses/Error"
+        "503":
+          $ref: "#/components/responses/Error"
+        default:
+          $ref: "#/components/responses/Error"
+  /v1/sites/{siteId}/work/{workId}/cancel:
+    parameters:
+      - $ref: "#/components/parameters/SiteId"
+      - $ref: "#/components/parameters/WorkId"
+    post:
+      operationId: cancelWork
+      summary: Cancel before a committed handoff.
+      parameters:
+        - $ref: "#/components/parameters/IdempotencyKey"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CancelInput"
+      responses:
+        "201":
+          description: Committed or original replayed receipt.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Receipt"
+        "400":
+          $ref: "#/components/responses/Error"
+        "401":
+          $ref: "#/components/responses/Error"
+        "403":
+          $ref: "#/components/responses/Error"
+        "404":
+          $ref: "#/components/responses/Error"
+        "409":
+          description: Revision, state or idempotency conflict.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "413":
+          $ref: "#/components/responses/Error"
+        "415":
+          $ref: "#/components/responses/Error"
+        "422":
+          $ref: "#/components/responses/Error"
+        "429":
+          $ref: "#/components/responses/Error"
+        "503":
+          $ref: "#/components/responses/Error"
+        default:
+          $ref: "#/components/responses/Error"
+  /v1/sites/{siteId}/work/{workId}/returns:
+    parameters:
+      - $ref: "#/components/parameters/SiteId"
+      - $ref: "#/components/parameters/WorkId"
+    post:
+      operationId: requestReturn
+      summary: Reserve eligible delivered units for intake.
+      parameters:
+        - $ref: "#/components/parameters/IdempotencyKey"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ReturnInput"
+      responses:
+        "201":
+          description: Committed or original replayed receipt.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Receipt"
+        "400":
+          $ref: "#/components/responses/Error"
+        "401":
+          $ref: "#/components/responses/Error"
+        "403":
+          $ref: "#/components/responses/Error"
+        "404":
+          $ref: "#/components/responses/Error"
+        "409":
+          description: Revision, state or idempotency conflict.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "413":
+          $ref: "#/components/responses/Error"
+        "415":
+          $ref: "#/components/responses/Error"
+        "422":
+          $ref: "#/components/responses/Error"
+        "429":
+          $ref: "#/components/responses/Error"
+        "503":
+          $ref: "#/components/responses/Error"
+        default:
+          $ref: "#/components/responses/Error"
+  /v1/sites/{siteId}/work/{workId}/returns/{returnId}/receive:
+    parameters:
+      - $ref: "#/components/parameters/SiteId"
+      - $ref: "#/components/parameters/WorkId"
+      - $ref: "#/components/parameters/ReturnId"
+    post:
+      operationId: receiveReturn
+      summary: Record receipt of reserved units.
+      parameters:
+        - $ref: "#/components/parameters/IdempotencyKey"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ClaimInput"
+      responses:
+        "201":
+          description: Committed or original replayed receipt.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Receipt"
+        "400":
+          $ref: "#/components/responses/Error"
+        "401":
+          $ref: "#/components/responses/Error"
+        "403":
+          $ref: "#/components/responses/Error"
+        "404":
+          $ref: "#/components/responses/Error"
+        "409":
+          description: Revision, state or idempotency conflict.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "413":
+          $ref: "#/components/responses/Error"
+        "415":
+          $ref: "#/components/responses/Error"
+        "422":
+          $ref: "#/components/responses/Error"
+        "429":
+          $ref: "#/components/responses/Error"
+        "503":
+          $ref: "#/components/responses/Error"
+        default:
+          $ref: "#/components/responses/Error"
+  /v1/sites/{siteId}/work/{workId}/returns/{returnId}/inspections:
+    parameters:
+      - $ref: "#/components/parameters/SiteId"
+      - $ref: "#/components/parameters/WorkId"
+      - $ref: "#/components/parameters/ReturnId"
+    post:
+      operationId: inspectReturn
+      summary: Record the received condition.
+      parameters:
+        - $ref: "#/components/parameters/IdempotencyKey"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/InspectInput"
+      responses:
+        "201":
+          description: Committed or original replayed receipt.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Receipt"
+        "400":
+          $ref: "#/components/responses/Error"
+        "401":
+          $ref: "#/components/responses/Error"
+        "403":
+          $ref: "#/components/responses/Error"
+        "404":
+          $ref: "#/components/responses/Error"
+        "409":
+          description: Revision, state or idempotency conflict.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "413":
+          $ref: "#/components/responses/Error"
+        "415":
+          $ref: "#/components/responses/Error"
+        "422":
+          $ref: "#/components/responses/Error"
+        "429":
+          $ref: "#/components/responses/Error"
+        "503":
+          $ref: "#/components/responses/Error"
+        default:
+          $ref: "#/components/responses/Error"
+  /v1/sites/{siteId}/work/{workId}/returns/{returnId}/disposition:
+    parameters:
+      - $ref: "#/components/parameters/SiteId"
+      - $ref: "#/components/parameters/WorkId"
+      - $ref: "#/components/parameters/ReturnId"
+    post:
+      operationId: recordDisposition
+      summary: Record the authorized local disposition.
+      parameters:
+        - $ref: "#/components/parameters/IdempotencyKey"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/DispositionInput"
+      responses:
+        "201":
+          description: Committed or original replayed receipt.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Receipt"
+        "400":
+          $ref: "#/components/responses/Error"
+        "401":
+          $ref: "#/components/responses/Error"
+        "403":
+          $ref: "#/components/responses/Error"
+        "404":
+          $ref: "#/components/responses/Error"
+        "409":
+          description: Revision, state or idempotency conflict.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "413":
+          $ref: "#/components/responses/Error"
+        "415":
+          $ref: "#/components/responses/Error"
+        "422":
+          $ref: "#/components/responses/Error"
+        "429":
+          $ref: "#/components/responses/Error"
+        "503":
+          $ref: "#/components/responses/Error"
+        default:
+          $ref: "#/components/responses/Error"
+  /v1/sites/{siteId}/report:
+    parameters:
+      - $ref: "#/components/parameters/SiteId"
+    get:
+      operationId: report
+      summary: Read a site-scoped supervisor operations report.
+      responses:
+        "200":
+          description: Report at the observed server time.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Report"
+        "400":
+          $ref: "#/components/responses/Error"
+        "401":
+          $ref: "#/components/responses/Error"
+        "403":
+          $ref: "#/components/responses/Error"
+        "404":
+          $ref: "#/components/responses/Error"
+        "429":
+          $ref: "#/components/responses/Error"
+        "503":
+          $ref: "#/components/responses/Error"
+        default:
+          $ref: "#/components/responses/Error"
+components:
+  securitySchemes:
+    StaffSession:
+      type: http
+      scheme: bearer
+      bearerFormat: Opaque expiring staff session
+  parameters:
+    SiteId:
+      name: siteId
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+    WorkId:
+      name: workId
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+    OperationId:
+      name: operationId
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+    IdempotencyKey:
+      name: Idempotency-Key
+      in: header
+      required: true
+      description: Original operation UUID scoped to actor and business/site.
+      schema:
+        type: string
+        format: uuid
+    LineId:
+      name: lineId
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+    ShortageId:
+      name: shortageId
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+    ReturnId:
+      name: returnId
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+  responses:
+    Error:
+      description: >-
+        See the transport rules for stable code and HTTP mapping. Protected records are omitted on denied
+        scope.
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/Error"
+  schemas:
+    Health:
+      type: object
+      additionalProperties: false
+      required:
+        - status
+      properties:
+        status:
+          type: string
+          enum:
+            - ok
+    SignIn:
+      type: object
+      properties:
+        loginId:
+          type: string
+          pattern: ^[a-z0-9][a-z0-9@._-]{2,119}$
+        password:
+          type: string
+          minLength: 1
+          maxLength: 256
+      required:
+        - loginId
+        - password
+      additionalProperties: false
+    InvitationRedemption:
+      type: object
+      properties:
+        invitation:
+          type: string
+          minLength: 32
+          maxLength: 256
+        password:
+          type: string
+          minLength: 12
+          maxLength: 256
+      required:
+        - invitation
+        - password
+      additionalProperties: false
+    Enrollment:
+      type: object
+      additionalProperties: false
+      required:
+        - personId
+      properties:
+        personId:
+          type: string
+          format: uuid
+    Session:
+      type: object
+      additionalProperties: false
+      required:
+        - token
+        - expiresAt
+      properties:
+        token:
+          type: string
+          minLength: 1
+          maxLength: 512
+        expiresAt:
+          type: string
+          format: date-time
+    Site:
+      type: object
+      additionalProperties: false
+      required:
+        - id
+        - name
+        - timeZone
+        - roles
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+          minLength: 1
+          maxLength: 100
+        timeZone:
+          type: string
+          minLength: 1
+          maxLength: 80
+        roles:
+          type: array
+          minItems: 1
+          maxItems: 6
+          items:
+            type: string
+            enum:
+              - owner
+              - supervisor
+              - picker
+              - packer
+              - handoff
+              - support
+    SiteList:
+      type: object
+      additionalProperties: false
+      required:
+        - sites
+      properties:
+        sites:
+          type: array
+          minItems: 0
+          maxItems: 100
+          items:
+            $ref: "#/components/schemas/Site"
+    ReleaseLineInput:
+      type: object
+      additionalProperties: false
+      required:
+        - sourceLineRef
+        - sku
+        - bin
+        - units
+        - unit
+      properties:
+        sourceLineRef:
+          type: string
+          minLength: 1
+          maxLength: 80
+        sku:
+          type: string
+          minLength: 1
+          maxLength: 80
+        bin:
+          type: string
+          minLength: 1
+          maxLength: 64
+        units:
+          type: integer
+          minimum: 1
+          maximum: 10000
+        unit:
+          type: string
+          enum:
+            - EA
+        barcodeAliases:
+          type: array
+          minItems: 0
+          maxItems: 8
+          items:
+            type: string
+            minLength: 1
+            maxLength: 80
+    ReleaseInput:
+      type: object
+      properties:
+        sourceReleaseRef:
+          type: string
+          minLength: 1
+          maxLength: 80
+        sourceOrderRef:
+          type: string
+          minLength: 1
+          maxLength: 80
+        sourceRevision:
+          type: integer
+          minimum: 1
+          maximum: 2147483647
+        releasedByRef:
+          type: string
+          minLength: 1
+          maxLength: 100
+        observedAt:
+          type: string
+          format: date-time
+          pattern: >-
+            ^(?:(?:\d\d[2468][048]|\d\d[13579][26]|\d\d0[48]|[02468][048]00|[13579][26]00)-02-29|\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\d|30)|(?:02)-(?:0[1-9]|1\d|2[0-8])))T(?:(?:[01]\d|2[0-3]):[0-5]\d:[0-5]\d(?:\.\d+)?(?:Z|([+-](?:[01]\d|2[0-3]):[0-5]\d)))$
+        priority:
+          type: integer
+          minimum: 0
+          maximum: 5
+        dueAt:
+          type: string
+          format: date-time
+          pattern: >-
+            ^(?:(?:\d\d[2468][048]|\d\d[13579][26]|\d\d0[48]|[02468][048]00|[13579][26]00)-02-29|\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\d|30)|(?:02)-(?:0[1-9]|1\d|2[0-8])))T(?:(?:[01]\d|2[0-3]):[0-5]\d:[0-5]\d(?:\.\d+)?(?:Z|([+-](?:[01]\d|2[0-3]):[0-5]\d)))$
+        lines:
+          minItems: 1
+          maxItems: 100
+          type: array
+          items:
+            type: object
+            properties:
+              sourceLineRef:
+                type: string
+                minLength: 1
+                maxLength: 80
+              sku:
+                type: string
+                minLength: 1
+                maxLength: 80
+              bin:
+                type: string
+                minLength: 1
+                maxLength: 64
+              unit:
+                type: string
+                const: EA
+              units:
+                type: integer
+                minimum: 1
+                maximum: 10000
+              barcodeAliases:
+                default: []
+                maxItems: 8
+                type: array
+                items:
+                  type: string
+                  minLength: 1
+                  maxLength: 80
+            required:
+              - sourceLineRef
+              - sku
+              - bin
+              - unit
+              - units
+            additionalProperties: false
+      required:
+        - sourceReleaseRef
+        - sourceOrderRef
+        - sourceRevision
+        - releasedByRef
+        - observedAt
+        - priority
+        - lines
+      additionalProperties: false
+    WorkSummary:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          pattern: >-
+            ^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$
+        reference:
+          type: string
+        status:
+          type: string
+          enum:
+            - released
+            - claimed
+            - picking
+            - exception
+            - picked
+            - packed
+            - handed_over
+            - cancelled
+        revision:
+          type: integer
+          minimum: 1
+          maximum: 2147483647
+        priority:
+          type: number
+        releasedAt:
+          type: string
+          format: date-time
+          pattern: >-
+            ^(?:(?:\d\d[2468][048]|\d\d[13579][26]|\d\d0[48]|[02468][048]00|[13579][26]00)-02-29|\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\d|30)|(?:02)-(?:0[1-9]|1\d|2[0-8])))T(?:(?:[01]\d|2[0-3]):[0-5]\d:[0-5]\d(?:\.\d+)?(?:Z|([+-](?:[01]\d|2[0-3]):[0-5]\d)))$
+        updatedAt:
+          type: string
+          format: date-time
+          pattern: >-
+            ^(?:(?:\d\d[2468][048]|\d\d[13579][26]|\d\d0[48]|[02468][048]00|[13579][26]00)-02-29|\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\d|30)|(?:02)-(?:0[1-9]|1\d|2[0-8])))T(?:(?:[01]\d|2[0-3]):[0-5]\d:[0-5]\d(?:\.\d+)?(?:Z|([+-](?:[01]\d|2[0-3]):[0-5]\d)))$
+        dueAt:
+          type: string
+          format: date-time
+          pattern: >-
+            ^(?:(?:\d\d[2468][048]|\d\d[13579][26]|\d\d0[48]|[02468][048]00|[13579][26]00)-02-29|\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\d|30)|(?:02)-(?:0[1-9]|1\d|2[0-8])))T(?:(?:[01]\d|2[0-3]):[0-5]\d:[0-5]\d(?:\.\d+)?(?:Z|([+-](?:[01]\d|2[0-3]):[0-5]\d)))$
+        source:
+          type: string
+          const: manual
+      required:
+        - id
+        - reference
+        - status
+        - revision
+        - priority
+        - releasedAt
+        - updatedAt
+        - source
+      additionalProperties: false
+    WorkPage:
+      type: object
+      properties:
+        items:
+          type: array
+          items:
+            type: object
+            properties:
+              id:
+                type: string
+                format: uuid
+                pattern: >-
+                  ^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$
+              reference:
+                type: string
+              status:
+                type: string
+                enum:
+                  - released
+                  - claimed
+                  - picking
+                  - exception
+                  - picked
+                  - packed
+                  - handed_over
+                  - cancelled
+              revision:
+                type: integer
+                minimum: 1
+                maximum: 2147483647
+              priority:
+                type: number
+              releasedAt:
+                type: string
+                format: date-time
+                pattern: >-
+                  ^(?:(?:\d\d[2468][048]|\d\d[13579][26]|\d\d0[48]|[02468][048]00|[13579][26]00)-02-29|\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\d|30)|(?:02)-(?:0[1-9]|1\d|2[0-8])))T(?:(?:[01]\d|2[0-3]):[0-5]\d:[0-5]\d(?:\.\d+)?(?:Z|([+-](?:[01]\d|2[0-3]):[0-5]\d)))$
+              updatedAt:
+                type: string
+                format: date-time
+                pattern: >-
+                  ^(?:(?:\d\d[2468][048]|\d\d[13579][26]|\d\d0[48]|[02468][048]00|[13579][26]00)-02-29|\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\d|30)|(?:02)-(?:0[1-9]|1\d|2[0-8])))T(?:(?:[01]\d|2[0-3]):[0-5]\d:[0-5]\d(?:\.\d+)?(?:Z|([+-](?:[01]\d|2[0-3]):[0-5]\d)))$
+              dueAt:
+                type: string
+                format: date-time
+                pattern: >-
+                  ^(?:(?:\d\d[2468][048]|\d\d[13579][26]|\d\d0[48]|[02468][048]00|[13579][26]00)-02-29|\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\d|30)|(?:02)-(?:0[1-9]|1\d|2[0-8])))T(?:(?:[01]\d|2[0-3]):[0-5]\d:[0-5]\d(?:\.\d+)?(?:Z|([+-](?:[01]\d|2[0-3]):[0-5]\d)))$
+              source:
+                type: string
+                const: manual
+            required:
+              - id
+              - reference
+              - status
+              - revision
+              - priority
+              - releasedAt
+              - updatedAt
+              - source
+            additionalProperties: false
+        asOf:
+          type: string
+          format: date-time
+          pattern: >-
+            ^(?:(?:\d\d[2468][048]|\d\d[13579][26]|\d\d0[48]|[02468][048]00|[13579][26]00)-02-29|\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\d|30)|(?:02)-(?:0[1-9]|1\d|2[0-8])))T(?:(?:[01]\d|2[0-3]):[0-5]\d:[0-5]\d(?:\.\d+)?(?:Z|([+-](?:[01]\d|2[0-3]):[0-5]\d)))$
+        truncated:
+          type: boolean
+        nextCursor:
+          type: string
+      required:
+        - items
+        - asOf
+        - truncated
+      additionalProperties: false
+    WorkLine:
+      type: object
+      additionalProperties: false
+      required:
+        - id
+        - sku
+        - bin
+        - unit
+        - requiredUnits
+        - pickedUnits
+      properties:
+        id:
+          type: string
+          format: uuid
+        sku:
+          type: string
+          minLength: 1
+          maxLength: 80
+        bin:
+          type: string
+          minLength: 1
+          maxLength: 64
+        unit:
+          type: string
+          enum:
+            - EA
+        requiredUnits:
+          type: integer
+          minimum: 0
+          maximum: 10000
+        pickedUnits:
+          type: integer
+          minimum: 0
+          maximum: 10000
+    WorkEvent:
+      type: object
+      additionalProperties: false
+      required:
+        - eventId
+        - type
+        - at
+        - revision
+      properties:
+        eventId:
+          type: string
+          format: uuid
+        type:
+          type: string
+          enum:
+            - release.create
+            - work.claim
+        at:
+          type: string
+          format: date-time
+        revision:
+          type: integer
+          minimum: 1
+          maximum: 2147483647
+        actorRef:
+          type: string
+          format: uuid
+    WorkDetail:
+      type: object
+      properties:
+        work:
+          type: object
+          properties:
+            id:
+              type: string
+              format: uuid
+              pattern: >-
+                ^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$
+            reference:
+              type: string
+            status:
+              type: string
+              enum:
+                - released
+                - claimed
+                - picking
+                - exception
+                - picked
+                - packed
+                - handed_over
+                - cancelled
+            revision:
+              type: integer
+              minimum: 1
+              maximum: 2147483647
+            priority:
+              type: number
+            releasedAt:
+              type: string
+              format: date-time
+              pattern: >-
+                ^(?:(?:\d\d[2468][048]|\d\d[13579][26]|\d\d0[48]|[02468][048]00|[13579][26]00)-02-29|\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\d|30)|(?:02)-(?:0[1-9]|1\d|2[0-8])))T(?:(?:[01]\d|2[0-3]):[0-5]\d:[0-5]\d(?:\.\d+)?(?:Z|([+-](?:[01]\d|2[0-3]):[0-5]\d)))$
+            updatedAt:
+              type: string
+              format: date-time
+              pattern: >-
+                ^(?:(?:\d\d[2468][048]|\d\d[13579][26]|\d\d0[48]|[02468][048]00|[13579][26]00)-02-29|\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\d|30)|(?:02)-(?:0[1-9]|1\d|2[0-8])))T(?:(?:[01]\d|2[0-3]):[0-5]\d:[0-5]\d(?:\.\d+)?(?:Z|([+-](?:[01]\d|2[0-3]):[0-5]\d)))$
+            dueAt:
+              type: string
+              format: date-time
+              pattern: >-
+                ^(?:(?:\d\d[2468][048]|\d\d[13579][26]|\d\d0[48]|[02468][048]00|[13579][26]00)-02-29|\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\d|30)|(?:02)-(?:0[1-9]|1\d|2[0-8])))T(?:(?:[01]\d|2[0-3]):[0-5]\d:[0-5]\d(?:\.\d+)?(?:Z|([+-](?:[01]\d|2[0-3]):[0-5]\d)))$
+            source:
+              type: string
+              const: manual
+          required:
+            - id
+            - reference
+            - status
+            - revision
+            - priority
+            - releasedAt
+            - updatedAt
+            - source
+          additionalProperties: false
+        allowedActions:
+          type: array
+          items:
+            type: string
+            enum:
+              - claim
+              - release_claim
+              - reassign
+              - pick
+              - shortage
+              - resolve
+              - pack
+              - handoff
+              - cancel
+              - open_return
+              - receive
+              - inspect
+              - disposition
+        lines:
+          type: array
+          items:
+            type: object
+            properties:
+              id:
+                type: string
+                format: uuid
+                pattern: >-
+                  ^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$
+              sku:
+                type: string
+              bin:
+                type: string
+              unit:
+                type: string
+                const: EA
+              requiredUnits:
+                type: integer
+                minimum: 1
+                maximum: 10000
+              pickedUnits:
+                type: integer
+                minimum: 0
+                maximum: 9007199254740991
+              approvedUnits:
+                type: integer
+                minimum: 0
+                maximum: 9007199254740991
+            required:
+              - id
+              - sku
+              - bin
+              - unit
+              - requiredUnits
+              - pickedUnits
+              - approvedUnits
+            additionalProperties: false
+        claim:
+          type: object
+          properties:
+            id:
+              type: string
+              format: uuid
+              pattern: >-
+                ^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$
+            assigneeRef:
+              type: string
+              format: uuid
+              pattern: >-
+                ^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$
+          required:
+            - id
+            - assigneeRef
+          additionalProperties: false
+        history:
+          type: array
+          items:
+            type: object
+            properties:
+              eventId:
+                type: string
+                format: uuid
+                pattern: >-
+                  ^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$
+              type:
+                type: string
+              at:
+                type: string
+                format: date-time
+                pattern: >-
+                  ^(?:(?:\d\d[2468][048]|\d\d[13579][26]|\d\d0[48]|[02468][048]00|[13579][26]00)-02-29|\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\d|30)|(?:02)-(?:0[1-9]|1\d|2[0-8])))T(?:(?:[01]\d|2[0-3]):[0-5]\d:[0-5]\d(?:\.\d+)?(?:Z|([+-](?:[01]\d|2[0-3]):[0-5]\d)))$
+              revision:
+                type: integer
+                minimum: 1
+                maximum: 2147483647
+              actorRef:
+                type: string
+                format: uuid
+                pattern: >-
+                  ^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$
+            required:
+              - eventId
+              - type
+              - at
+              - revision
+            additionalProperties: false
+        shortageId:
+          type: string
+          format: uuid
+          pattern: >-
+            ^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$
+        packageId:
+          type: string
+          format: uuid
+          pattern: >-
+            ^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$
+        returns:
+          type: array
+          items:
+            type: object
+            properties:
+              id:
+                type: string
+                format: uuid
+                pattern: >-
+                  ^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$
+              lineId:
+                type: string
+                format: uuid
+                pattern: >-
+                  ^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$
+              units:
+                type: integer
+                minimum: 1
+                maximum: 10000
+              status:
+                type: string
+                enum:
+                  - requested
+                  - received
+                  - inspected
+                  - dispositioned
+              condition:
+                type:
+                  - string
+                  - "null"
+              disposition:
+                type:
+                  - string
+                  - "null"
+            required:
+              - id
+              - lineId
+              - units
+              - status
+              - condition
+              - disposition
+            additionalProperties: false
+      required:
+        - work
+        - allowedActions
+        - history
+      additionalProperties: false
+    Claim:
+      type: object
+      additionalProperties: false
+      required:
+        - id
+        - assigneeRef
+      properties:
+        id:
+          type: string
+          format: uuid
+        assigneeRef:
+          type: string
+          format: uuid
+    ClaimInput:
+      type: object
+      properties:
+        expectedVersion:
+          type: integer
+          minimum: 1
+          maximum: 2147483647
+      required:
+        - expectedVersion
+      additionalProperties: false
+    Receipt:
+      type: object
+      properties:
+        operationId:
+          type: string
+          format: uuid
+          pattern: >-
+            ^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$
+        workId:
+          type: string
+          format: uuid
+          pattern: >-
+            ^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$
+        type:
+          type: string
+        revision:
+          type: integer
+          minimum: 1
+          maximum: 2147483647
+        status:
+          type: string
+          enum:
+            - released
+            - claimed
+            - picking
+            - exception
+            - picked
+            - packed
+            - handed_over
+            - cancelled
+        committedAt:
+          type: string
+          format: date-time
+          pattern: >-
+            ^(?:(?:\d\d[2468][048]|\d\d[13579][26]|\d\d0[48]|[02468][048]00|[13579][26]00)-02-29|\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\d|30)|(?:02)-(?:0[1-9]|1\d|2[0-8])))T(?:(?:[01]\d|2[0-3]):[0-5]\d:[0-5]\d(?:\.\d+)?(?:Z|([+-](?:[01]\d|2[0-3]):[0-5]\d)))$
+        claim:
+          type: object
+          properties:
+            id:
+              type: string
+              format: uuid
+              pattern: >-
+                ^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$
+            assigneeRef:
+              type: string
+              format: uuid
+              pattern: >-
+                ^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$
+          required:
+            - id
+            - assigneeRef
+          additionalProperties: false
+        recordId:
+          type: string
+          format: uuid
+          pattern: >-
+            ^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$
+      required:
+        - operationId
+        - workId
+        - type
+        - revision
+        - status
+        - committedAt
+      additionalProperties: false
+    FieldError:
+      type: object
+      additionalProperties: false
+      required:
+        - field
+        - code
+      properties:
+        field:
+          type: string
+          minLength: 1
+          maxLength: 100
+        code:
+          type: string
+          minLength: 1
+          maxLength: 64
+    Error:
+      type: object
+      additionalProperties: false
+      required:
+        - code
+        - message
+        - correlationId
+      properties:
+        code:
+          type: string
+          minLength: 1
+          maxLength: 64
+        message:
+          type: string
+          minLength: 1
+          maxLength: 240
+        correlationId:
+          type: string
+          format: uuid
+        fieldErrors:
+          type: array
+          minItems: 0
+          maxItems: 50
+          items:
+            $ref: "#/components/schemas/FieldError"
+    Conflict:
+      type: object
+      additionalProperties: false
+      required:
+        - code
+        - message
+        - correlationId
+      properties:
+        code:
+          type: string
+          enum:
+            - VERSION_CONFLICT
+            - ALREADY_CLAIMED
+            - RELEASE_CONFLICT
+            - IDEMPOTENCY_MISMATCH
+            - CURSOR_EXPIRED
+        message:
+          type: string
+          minLength: 1
+          maxLength: 240
+        correlationId:
+          type: string
+          format: uuid
+        currentWork:
+          $ref: "#/components/schemas/WorkSummary"
+        currentAssigneeRef:
+          type: string
+          format: uuid
+    Report:
+      type: object
+      properties:
+        timeZone:
+          type: string
+        asOf:
+          type: string
+          format: date-time
+          pattern: >-
+            ^(?:(?:\d\d[2468][048]|\d\d[13579][26]|\d\d0[48]|[02468][048]00|[13579][26]00)-02-29|\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\d|30)|(?:02)-(?:0[1-9]|1\d|2[0-8])))T(?:(?:[01]\d|2[0-3]):[0-5]\d:[0-5]\d(?:\.\d+)?(?:Z|([+-](?:[01]\d|2[0-3]):[0-5]\d)))$
+        from:
+          type: string
+          format: date-time
+          pattern: >-
+            ^(?:(?:\d\d[2468][048]|\d\d[13579][26]|\d\d0[48]|[02468][048]00|[13579][26]00)-02-29|\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\d|30)|(?:02)-(?:0[1-9]|1\d|2[0-8])))T(?:(?:[01]\d|2[0-3]):[0-5]\d:[0-5]\d(?:\.\d+)?(?:Z|([+-](?:[01]\d|2[0-3]):[0-5]\d)))$
+        oldestReleasedAt:
+          anyOf:
+            - type: string
+              format: date-time
+              pattern: >-
+                ^(?:(?:\d\d[2468][048]|\d\d[13579][26]|\d\d0[48]|[02468][048]00|[13579][26]00)-02-29|\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\d|30)|(?:02)-(?:0[1-9]|1\d|2[0-8])))T(?:(?:[01]\d|2[0-3]):[0-5]\d:[0-5]\d(?:\.\d+)?(?:Z|([+-](?:[01]\d|2[0-3]):[0-5]\d)))$
+            - type: "null"
+        pickedUnits:
+          type: integer
+          minimum: 0
+          maximum: 9007199254740991
+        shortageUnits:
+          type: integer
+          minimum: 0
+          maximum: 9007199254740991
+        averageHandoffMinutes:
+          type:
+            - number
+            - "null"
+        unresolvedReturnUnits:
+          type: integer
+          minimum: 0
+          maximum: 9007199254740991
+      required:
+        - timeZone
+        - asOf
+        - from
+        - oldestReleasedAt
+        - pickedUnits
+        - shortageUnits
+        - averageHandoffMinutes
+        - unresolvedReturnUnits
+      additionalProperties: false
+    ReleaseClaimInput:
+      type: object
+      properties:
+        expectedVersion:
+          type: integer
+          minimum: 1
+          maximum: 2147483647
+        claimId:
+          type: string
+          format: uuid
+          pattern: >-
+            ^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$
+        reason:
+          type: string
+          minLength: 1
+          maxLength: 240
+      required:
+        - expectedVersion
+        - claimId
+        - reason
+      additionalProperties: false
+    ReassignInput:
+      type: object
+      properties:
+        expectedVersion:
+          type: integer
+          minimum: 1
+          maximum: 2147483647
+        claimId:
+          type: string
+          format: uuid
+          pattern: >-
+            ^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$
+        reason:
+          type: string
+          minLength: 1
+          maxLength: 240
+        assigneeRef:
+          type: string
+          format: uuid
+          pattern: >-
+            ^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$
+      required:
+        - expectedVersion
+        - claimId
+        - reason
+        - assigneeRef
+      additionalProperties: false
+    PickInput:
+      type: object
+      properties:
+        expectedVersion:
+          type: integer
+          minimum: 1
+          maximum: 2147483647
+        claimId:
+          type: string
+          format: uuid
+          pattern: >-
+            ^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$
+        productRef:
+          type: string
+          minLength: 1
+          maxLength: 80
+        pickedEach:
+          type: integer
+          minimum: 1
+          maximum: 10000
+        source:
+          type: string
+          enum:
+            - manual
+            - camera
+            - wedge
+      required:
+        - expectedVersion
+        - claimId
+        - productRef
+        - pickedEach
+        - source
+      additionalProperties: false
+    ShortageInput:
+      type: object
+      properties:
+        expectedVersion:
+          type: integer
+          minimum: 1
+          maximum: 2147483647
+        claimId:
+          type: string
+          format: uuid
+          pattern: >-
+            ^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$
+        units:
+          type: integer
+          minimum: 1
+          maximum: 10000
+        reason:
+          type: string
+          minLength: 1
+          maxLength: 240
+      required:
+        - expectedVersion
+        - claimId
+        - units
+        - reason
+      additionalProperties: false
+    ResolveShortageInput:
+      type: object
+      properties:
+        expectedVersion:
+          type: integer
+          minimum: 1
+          maximum: 2147483647
+        decision:
+          type: string
+          enum:
+            - wait
+            - partial
+        reason:
+          type: string
+          minLength: 1
+          maxLength: 240
+      required:
+        - expectedVersion
+        - decision
+        - reason
+      additionalProperties: false
+    PackInput:
+      type: object
+      properties:
+        expectedVersion:
+          type: integer
+          minimum: 1
+          maximum: 2147483647
+        reference:
+          type: string
+          minLength: 1
+          maxLength: 80
+        contents:
+          minItems: 1
+          maxItems: 100
+          type: array
+          items:
+            type: object
+            properties:
+              lineId:
+                type: string
+                format: uuid
+                pattern: >-
+                  ^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$
+              units:
+                type: integer
+                minimum: 1
+                maximum: 10000
+            required:
+              - lineId
+              - units
+            additionalProperties: false
+      required:
+        - expectedVersion
+        - reference
+        - contents
+      additionalProperties: false
+    HandoffInput:
+      type: object
+      properties:
+        expectedVersion:
+          type: integer
+          minimum: 1
+          maximum: 2147483647
+        packageId:
+          type: string
+          format: uuid
+          pattern: >-
+            ^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$
+        pickupRef:
+          type: string
+          minLength: 1
+          maxLength: 80
+        method:
+          type: string
+          enum:
+            - pickup
+            - carrier_transfer
+        observedAt:
+          type: string
+          format: date-time
+          pattern: >-
+            ^(?:(?:\d\d[2468][048]|\d\d[13579][26]|\d\d0[48]|[02468][048]00|[13579][26]00)-02-29|\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\d|30)|(?:02)-(?:0[1-9]|1\d|2[0-8])))T(?:(?:[01]\d|2[0-3]):[0-5]\d:[0-5]\d(?:\.\d+)?(?:Z|([+-](?:[01]\d|2[0-3]):[0-5]\d)))$
+        observed:
+          type: boolean
+          const: true
+      required:
+        - expectedVersion
+        - packageId
+        - pickupRef
+        - method
+        - observedAt
+        - observed
+      additionalProperties: false
+    CancelInput:
+      type: object
+      properties:
+        expectedVersion:
+          type: integer
+          minimum: 1
+          maximum: 2147483647
+        reason:
+          type: string
+          minLength: 1
+          maxLength: 240
+        physicalDisposition:
+          type: string
+          minLength: 1
+          maxLength: 240
+      required:
+        - expectedVersion
+        - reason
+      additionalProperties: false
+    ReturnInput:
+      type: object
+      properties:
+        expectedVersion:
+          type: integer
+          minimum: 1
+          maximum: 2147483647
+        lineId:
+          type: string
+          format: uuid
+          pattern: >-
+            ^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$
+        units:
+          type: integer
+          minimum: 1
+          maximum: 10000
+        reason:
+          type: string
+          minLength: 1
+          maxLength: 240
+      required:
+        - expectedVersion
+        - lineId
+        - units
+        - reason
+      additionalProperties: false
+    InspectInput:
+      type: object
+      properties:
+        expectedVersion:
+          type: integer
+          minimum: 1
+          maximum: 2147483647
+        condition:
+          type: string
+          enum:
+            - intact
+            - opened
+            - damaged
+            - unknown
+        reason:
+          type: string
+          minLength: 1
+          maxLength: 240
+      required:
+        - expectedVersion
+        - condition
+        - reason
+      additionalProperties: false
+    DispositionInput:
+      type: object
+      properties:
+        expectedVersion:
+          type: integer
+          minimum: 1
+          maximum: 2147483647
+        disposition:
+          type: string
+          enum:
+            - quarantine
+            - restock_eligible
+            - rejected
+        reason:
+          type: string
+          minLength: 1
+          maxLength: 240
+      required:
+        - expectedVersion
+        - disposition
+        - reason
+      additionalProperties: false
